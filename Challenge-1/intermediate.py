@@ -46,6 +46,7 @@ class Event:
 		self.datetime = datetime.strptime(f"{day} {hour} {ampm.upper()}", '%m/%d %I:%M %p')
 		self.length = length
 		self.td_length = timedelta(minutes=int(length))
+		self.data = {'name': self.name, 'datetime': self.datetime, 'length': self.length}
 		
 		
 	@classmethod
@@ -94,12 +95,20 @@ class Event:
 		user_params = dict(**user_params)
 		filter(retrieve_all_from_db())
 
+	def add_to_db(self, db):
+		db.add_to_db(self.data)
+
+	
+
 	def __str__(self):
 		return f"EVENT: {self.name}\n" \
 				f"WHEN: {self.datetime.strftime('%b %-d at %I:%M %p')}\n" \
 				f"LENGTH: {self.length}\n"
 				
 if __name__ == "__main__":
+
+	db = MongoEngine.establish_connection(host='mongodb://127.0.0.1:27017')
+
 	while True:
 		print("1: Add Event")
 		print("2: Delete Event")
