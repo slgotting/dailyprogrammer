@@ -6,13 +6,14 @@ from pymongo import MongoClient
 
 
 class MongoEngine:
-    def __init__(self, db='events', host=''):
+    def __init__(self, db='events', collection='events', host=''):
         try:
             self.client = MongoClient(host)
         except:
             print("Could not connect to MongoDB")
 
         self.db = self.client[db]
+        self.collection = self.db[collection]
 
     @classmethod
     def establish_connection(cls, host):
@@ -25,5 +26,5 @@ class MongoEngine:
         pass
 
     def add_to_db(self, event_json):
-        self.db.insert_one(
+        self.collection.insert_one(event_json)
         

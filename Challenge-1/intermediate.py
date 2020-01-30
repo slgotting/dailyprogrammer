@@ -50,7 +50,7 @@ class Event:
 		
 		
 	@classmethod
-	def handle_user_input(cls, value):
+	def handle_user_input(cls, value, db=None):
 
 		accepted_values = ['1', '2', '3', '4', '5']
 		if value not in accepted_values:
@@ -65,26 +65,27 @@ class Event:
 		elif value == '4':
 			self.list_events(date)
 		elif value == '5':
-			Event.add_event(test=True)
+			Event.add_event(test=True, db=db)
 
 	@classmethod
-	def generate_inst_from_json(cls, json, store=True):
+	def generate_inst_from_json(cls, json, store=False, db=None):
 		stored_json = json.copy()
 		validated = validate_json(json, Event.required_fields)
 		if validated:
 			print(stored_json)
 			if store == True:
-				add_to_db(stored_json)
-			return cls(**stored_json)
+				new_event = cls(**stored_json)
+				new_event.add_to_db(db)
+			return new_event or cls(**stored_json)
 		else:
 			raise ValueError(f"JSON object was of unsupported type")
 
 	@classmethod
-	def add_event(cls, json={}, return_json=False, test=False):
+	def add_event(cls, json={}, return_json=False, test=False, db=None):
 		if test == True:
 			json = {'name': "Doctor's Office", 'day': '01/21',
 					'hour': '01:30', 'ampm': 'PM', 'length': '60'}
-			return Event.generate_inst_from_json(json)
+			return Event.generate_inst_from_json(json, store=True, db=db)
 		else:
 			for item in Event.required_fields:
 				json[item] = input(f"{item.capitalize()} of Event ({Event.formatting_req_fields[item]}): ")
@@ -93,12 +94,10 @@ class Event:
 	@classmethod
 	def list_events(self, **user_params):
 		user_params = dict(**user_params)
-		filter(retrieve_all_from_db())
+		#filter(retrieve_all_from_db())
 
 	def add_to_db(self, db):
 		db.add_to_db(self.data)
-
-	
 
 	def __str__(self):
 		return f"EVENT: {self.name}\n" \
@@ -116,6 +115,6 @@ if __name__ == "__main__":
 		print("4: List Events Sorted By Date")
 		print("5: Test add event")
 		user_input = input("Enter the number you wish to choose: ")
-		Event.handle_user_input(user_input)
+		Event.handle_user_input(user_input, db=db)
 		
 		
