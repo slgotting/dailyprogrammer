@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from random import randint
 from pymongo import MongoClient
 from intermediate_dbengine import *
+from tabulate import tabulate
 
 
 
@@ -41,12 +42,16 @@ class Event:
 							 'length': 'minutes'}
 
 	def __init__(self, name=None, day=None, hour=None,
-				 ampm=None, length=None, id=None):
+				 ampm=None, length=None, id=None, db=None):
 		self.name = name
 		self.datetime = datetime.strptime(f"{day} {hour} {ampm.upper()}", '%m/%d %I:%M %p')
 		self.length = length
 		self.td_length = timedelta(minutes=int(length))
-		self.data = {'name': self.name, 'datetime': self.datetime, 'length': self.length}
+		self.id = db.first_empty_id() if db else None
+
+
+		self.data = {'id': self.id, 'name': self.name, 'datetime': self.datetime, 'length': self.length}
+		
 		
 		
 	@classmethod
@@ -61,9 +66,9 @@ class Event:
 		elif value == '2':
 			self.delete_event()
 		elif value == '3':
-			self.list_events()
+			cls.list_events(db, sort_by={'date_created': -1})
 		elif value == '4':
-			self.list_events(date)
+			cls.list_events(db, sort_by={'datetime': -1})
 		elif value == '5':
 			Event.add_event(test=True, db=db)
 
@@ -92,12 +97,21 @@ class Event:
 			return json if return_json else Event.generate_inst_from_json(json)
 
 	@classmethod
-	def list_events(self, **user_params):
-		user_params = dict(**user_params)
-		#filter(retrieve_all_from_db())
+	def list_events(cls, db, *user_params, sort_by=None):
+		user_params = dict(*user_params)
+		if sort_by:
+			items = db.sort_by(sort_by)
+		else:
+			#TODO
+			pass
 
-	def add_to_db(self, db):
+	def add_to_db(self, db, date_created=True):
+		if date_created == True:
+			self.data['date_created'] = datetime.now()
 		db.add_to_db(self.data)
+
+	def delete_from_db(self, db):
+		db.remove_all(self.data)
 
 	def __str__(self):
 		return f"EVENT: {self.name}\n" \
