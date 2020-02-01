@@ -37,19 +37,17 @@ def ask_for_verification(string_, func_name):
 class Event:
 
 	required_fields = ['name', 'day', 'hour', 'ampm', 'length']
-	formatting_req_fields = {'name': 'text', 'day': 'mm/dd',
+	formatting_req_fields = {'name': 'text', 'day': 'mm/dd/yy',
 							 'hour': 'hh:mm', 'ampm': 'AM or PM',
 							 'length': 'minutes'}
 
 	def __init__(self, name=None, day=None, hour=None,
 				 ampm=None, length=None, id=None, db=None):
 		self.name = name
-		self.datetime = datetime.strptime(f"{day} {hour} {ampm.upper()}", '%m/%d %I:%M %p')
+		self.datetime = datetime.strptime(f"{day} {hour} {ampm.upper()}", '%m/%d/%y %I:%M %p')
 		self.length = length
 		self.td_length = timedelta(minutes=int(length))
 		self.id = db.first_empty_id() if db else None
-
-
 		self.data = {'id': self.id, 'name': self.name, 'datetime': self.datetime, 'length': self.length}
 		
 		
@@ -79,6 +77,7 @@ class Event:
 		if validated:
 			print(stored_json)
 			if store == True:
+				stored_json['db'] = db
 				new_event = cls(**stored_json)
 				new_event.add_to_db(db)
 			return new_event or cls(**stored_json)
