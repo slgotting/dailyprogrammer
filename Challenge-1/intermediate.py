@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 
 from random import randint
+import pymongo
 from pymongo import MongoClient
 from intermediate_dbengine import *
 from tabulate import tabulate
@@ -64,9 +65,10 @@ class Event:
 		elif value == '2':
 			self.delete_event()
 		elif value == '3':
-			cls.list_events(db, sort_by={'date_created': -1})
+			cls.list_events(db)
 		elif value == '4':
-			cls.list_events(db, sort_by={'datetime': -1})
+			cls.list_events(db, sort_by=[('datetime', pymongo.DESCENDING),
+										 ('happy', -1)])
 		elif value == '5':
 			Event.add_event(test=True, db=db)
 
@@ -87,22 +89,42 @@ class Event:
 	@classmethod
 	def add_event(cls, json={}, return_json=False, test=False, db=None):
 		if test == True:
-			json = {'name': "Doctor's Office", 'day': '01/21',
+			json = {'name': "Doctor's Office", 'day': '01/21/20',
 					'hour': '01:30', 'ampm': 'PM', 'length': '60'}
 			return Event.generate_inst_from_json(json, store=True, db=db)
 		else:
 			for item in Event.required_fields:
+				item_to_add = self.validate(input(f"{item.capitalize()} of Event ({Event.formatting_req_fields[item]}): "), item)
+				
 				json[item] = input(f"{item.capitalize()} of Event ({Event.formatting_req_fields[item]}): ")
 			return json if return_json else Event.generate_inst_from_json(json)
 
 	@classmethod
 	def list_events(cls, db, *user_params, sort_by=None):
 		user_params = dict(*user_params)
+		cols = db.get_every_key_in_collection()
 		if sort_by:
 			items = db.sort_by(sort_by)
 		else:
-			#TODO
-			pass
+			items = db.retrieve_all_from_coll()
+	
+		item_list = []
+		for item in items:
+			instance_items = []
+			for col in cols:
+				try:
+					instance_items.append(item[col])
+				except:
+					instance_items.append('')
+			item_list.append(instance_items)
+		
+		
+		print(tabulate(item_list, headers=cols, tablefmt='grid'))
+
+	def validate(self, input_, field):
+		if field == 'name':
+			return input_
+		['name', 'day', 'hour', 'ampm', 'length']
 
 	def add_to_db(self, db, date_created=True):
 		if date_created == True:
