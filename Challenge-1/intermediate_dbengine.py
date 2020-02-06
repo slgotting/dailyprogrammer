@@ -37,6 +37,9 @@ class MongoEngine:
     def remove_all(self, json):
         self.collection.delete_many(json)
     
+    def delete_one(self, dict_):
+        self.collection.delete_one(dict_)
+    
     def sort_by(self, *args):
         return list(self.collection.find({}).sort(*args))
     

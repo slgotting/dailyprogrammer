@@ -26,6 +26,31 @@ def validate_json(json, mapping):
 				raise ValueError(f"required key: {key} not found in JSON object")
 
 	return True if len(json) < 1 else ask_for_verification(f"The passed JSON object had {len(json)} more keys than required", "validate_json")
+
+def validate(input_, field):
+		if field == 'name':
+			return input_
+		elif field == 'day':
+			try:
+				datetime.strptime(input_, '%m/%d/%y')
+				return input_
+			except:
+				validate(input("Invalid date format, try again (mm/dd/yy): "), field)
+		elif field == 'hour':
+			try:
+				datetime.strptime(input_, '%I:%M')
+				return input_
+			except:
+				validate(input('Please provide a valid 12 hour format (hh:mm): '), field)
+		elif field == 'ampm':
+			return input_ if input_ == 'AM' or input == 'PM' else validate(input('Input AM or PM: '), field)
+		elif field == 'length':
+			try:
+				return int(input_)
+			except:
+				validate(input('Please enter a valid integer (minutes): '), field)
+			
+		['name', 'day', 'hour', 'ampm', 'length']
 	
 def ask_for_verification(string_, func_name):
 	verify = input(f"{func_name} produced the following error: \n"
@@ -41,7 +66,6 @@ class Event:
 	formatting_req_fields = {'name': 'text', 'day': 'mm/dd/yy',
 							 'hour': 'hh:mm', 'ampm': 'AM or PM',
 							 'length': 'minutes'}
-
 	def __init__(self, name=None, day=None, hour=None,
 				 ampm=None, length=None, id=None, db=None):
 		self.name = name
@@ -55,34 +79,35 @@ class Event:
 		
 	@classmethod
 	def handle_user_input(cls, value, db=None):
-
-		accepted_values = ['1', '2', '3', '4', '5']
+		
+		accepted_values = ['1', '2', '3', '4', '5', '6']
 		if value not in accepted_values:
 			raise ValueError(f"Value {value} is not supported at this time")
 		
 		if value == '1':
-			Event.add_event()
+			cls.add_event(db=db)
 		elif value == '2':
-			self.delete_event()
+			cls.delete_event(db=db)
 		elif value == '3':
 			cls.list_events(db)
 		elif value == '4':
-			cls.list_events(db, sort_by=[('datetime', pymongo.DESCENDING),
-										 ('happy', -1)])
+			cls.list_events(db, sort_by=[('datetime', pymongo.DESCENDING)])
 		elif value == '5':
+			cls.list_events(db, sort_by=[('date_created', -1)])
+		elif value == '6':
 			Event.add_event(test=True, db=db)
 
 	@classmethod
-	def generate_inst_from_json(cls, json, store=False, db=None):
+	def create_event(cls, json, store=False, db=None):
 		stored_json = json.copy()
 		validated = validate_json(json, Event.required_fields)
 		if validated:
 			print(stored_json)
 			if store == True:
 				stored_json['db'] = db
-				new_event = cls(**stored_json)
-				new_event.add_to_db(db)
-			return new_event or cls(**stored_json)
+				cls(**stored_json).add_to_db(db) #instantiates class and adds it to the database
+			else:
+				return cls(**stored_json)
 		else:
 			raise ValueError(f"JSON object was of unsupported type")
 
@@ -91,13 +116,12 @@ class Event:
 		if test == True:
 			json = {'name': "Doctor's Office", 'day': '01/21/20',
 					'hour': '01:30', 'ampm': 'PM', 'length': '60'}
-			return Event.generate_inst_from_json(json, store=True, db=db)
+			return Event.create_event(json, store=True, db=db)
 		else:
 			for item in Event.required_fields:
-				item_to_add = self.validate(input(f"{item.capitalize()} of Event ({Event.formatting_req_fields[item]}): "), item)
-				
-				json[item] = input(f"{item.capitalize()} of Event ({Event.formatting_req_fields[item]}): ")
-			return json if return_json else Event.generate_inst_from_json(json)
+				item_to_add = validate(input(f"{item.capitalize()} of Event ({Event.formatting_req_fields[item]}): "), item)
+				json[item] = item_to_add
+			return json if return_json else Event.create_event(json, store=True, db=db)
 
 	@classmethod
 	def list_events(cls, db, *user_params, sort_by=None):
@@ -118,21 +142,18 @@ class Event:
 					instance_items.append('')
 			item_list.append(instance_items)
 		
-		
 		print(tabulate(item_list, headers=cols, tablefmt='grid'))
-
-	def validate(self, input_, field):
-		if field == 'name':
-			return input_
-		['name', 'day', 'hour', 'ampm', 'length']
 
 	def add_to_db(self, db, date_created=True):
 		if date_created == True:
 			self.data['date_created'] = datetime.now()
 		db.add_to_db(self.data)
 
-	def delete_from_db(self, db):
-		db.remove_all(self.data)
+	@classmethod
+	def delete_event(cls, db=None):
+		event_id = input('Please enter the id of the event you wish to delete: ')
+		db.delete_one({'id': int(event_id)})
+		
 
 	def __str__(self):
 		return f"EVENT: {self.name}\n" \
@@ -148,7 +169,8 @@ if __name__ == "__main__":
 		print("2: Delete Event")
 		print("3: List Events")
 		print("4: List Events Sorted By Date")
-		print("5: Test add event")
+		print("5: List events sorted by date created")
+		print("6: Test add event")
 		user_input = input("Enter the number you wish to choose: ")
 		Event.handle_user_input(user_input, db=db)
 		
